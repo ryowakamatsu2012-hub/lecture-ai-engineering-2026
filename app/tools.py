@@ -5,6 +5,7 @@
 """
 
 import json
+import random
 from functools import cache
 from pathlib import Path
 
@@ -16,6 +17,28 @@ MAX_RESULTS = 3
 def load_glossary() -> list[dict]:
     with open(DATA_DIR / "glossary.json", encoding="utf-8") as f:
         return json.load(f)["terms"]
+
+
+def make_quiz(lecture: int) -> str:
+    """指定した回の用語から1問をランダムに選び、クイズJSONを返す。
+
+    第N回の復習や、講義内容を確認する練習問題を作るときに使う。
+    例えば「第2回の用語をランダムに1つ出して、意味を答えさせたい」場合に利用する。
+    """
+    glossary = load_glossary()
+    entries = [e for e in glossary if e.get("lecture") == lecture]
+
+    if not entries:
+        return f"第{lecture}回に対応する用語は見つかりませんでした。"
+
+    term = random.choice(entries)
+    return json.dumps(
+        {
+            "question": f"『{term['term']}』の意味は？",
+            "answer": term["definition"],
+        },
+        ensure_ascii=False,
+    )
 
 
 def _normalize(text: str) -> str:
@@ -32,7 +55,8 @@ def search_glossary(query: str) -> str:
     """講座の用語集から用語を検索し、定義と、どの回で扱うかを返す。
 
     AIエンジニアリングの用語や、この講座（AIE2026）に固有の言葉について
-    答える前に使うこと。query には調べたい用語を1つだけ入れる（例: "LoRA"）。
+    答える前に使うこと。複数の用語を比較するときは、query に用語をまとめて入れる
+    （例: "LoRAとQLoRA"）。
     """
     q = _normalize(query)
     if not q:
